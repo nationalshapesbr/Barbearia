@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Financeiro — GusTico{% endblock %}
+{% block style %}
+<style>
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dash-card{background:var(--glass2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--borda);border-radius:14px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.dash-card h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.dash-card .sub{font-size:11px;color:var(--txt3)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi-box{background:rgba(15,15,15,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(42,21,37,.35);border-radius:12px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.kpi-box .icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:8px}
+.kpi-box b{display:block;font-size:22px;margin:2px 0}
+.kpi-box small{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px}
+.kpi-box .var{font-size:10px;margin-top:4px;display:inline-block;padding:2px 6px;border-radius:4px}
+.var.up{color:#22c55e;background:rgba(34,197,94,.1)}.var.down{color:var(--vm);background:rgba(196,30,42,.1)}.var.eq{color:var(--txt3);background:rgba(90,64,88,.15)}
+.top-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--borda);font-size:13px}
+.top-row:last-child{border-bottom:none}
+.top-num{font-size:16px;font-weight:700;color:var(--txt3);min-width:32px}
+.top-name{flex:1;font-weight:600;margin:0 12px}
+.pop-bar{flex:1.5;height:6px;background:var(--borda);border-radius:3px;margin:0 12px;overflow:hidden}
+.pop-fill{height:100%;border-radius:3px}
+.top-pct{min-width:40px;text-align:right;font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px}
+.met-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--borda);font-size:12px}
+.met-row:last-child{border-bottom:none}
+.met-icon{font-size:18px;min-width:28px;text-align:center}
+.met-bar{flex:1;height:5px;background:var(--borda);border-radius:3px;overflow:hidden}
+.met-fill{height:100%;border-radius:3px}
+.caixa-status{border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;display:flex;align-items:center;gap:8px}
+.chart-filter{display:flex;gap:4px;margin-top:8px}
+.chart-filter button{padding:4px 10px;border:1px solid var(--borda);border-radius:6px;background:transparent;color:var(--txt2);font-size:10px;cursor:pointer;font-family:inherit;transition:.15s}
+.chart-filter button.active{background:var(--vm);color:#fff;border-color:var(--vm)}
+.chart-filter button:hover:not(.active){border-color:var(--borda2);color:var(--txt)}
+@media(max-width:768px){.dash-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
+</style>
+{% endblock %}
+{% block content %}
+<!-- HEADER -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+<div><h2 style="font-size:18px;font-weight:700">Financeiro</h2><span style="font-size:11px;color:var(--txt3)">{{hoje|datebr}}</span></div>
+<div style="display:flex;gap:8px;align-items:center">
+<select class="inp" style="width:auto;padding:6px 10px;font-size:11px;min-width:140px" onchange="location.href='/admin/financeiro?mes='+this.value">
+{% for m in meses %}<option value="{{m.valor}}" {% if m.atual %}selected{% endif %}>📅 {{m.label}}</option>{% endfor %}
+</select>
+<a href="/admin/caixa-historico" class="btn btn-ghost btn-xs">📋 Histórico de caixas</a>
+{% if caixa_aberto %}<button class="btn btn-vm btn-xs" onclick="document.getElementById('modal-fechar').classList.add('open')">💼 Fechar caixa</button>
+{% else %}<button class="btn btn-vd btn-xs" onclick="document.getElementById('modal-abrir').classList.add('open')">💵 Abrir caixa</button>{% endif %}
+</div></div>
+<!-- STATUS CAIXA -->
+{% if caixa_aberto %}
+<div class="caixa-status" style="background:var(--vd2);border:1px solid rgba(34,197,94,.2)">
+<span style="color:var(--vd);font-weight:700">● Caixa aberto</span>{% if caixa_abertura %}<span style="color:var(--txt2)">desde {{caixa_abertura|horabr}}</span>{% endif %}
+<span style="margin-left:auto;color:var(--vd);font-weight:600">R${{total_hoje|brl}} · {{atend_hoje}} atend.</span></div>
+{% else %}
+<div class="caixa-status" style="background:rgba(196,30,42,.08);border:1px solid rgba(196,30,42,.2)">
+<span style="color:var(--vm);font-weight:700">● Caixa fechado</span>{% if caixa_fechamento %}<span style="color:var(--txt2)">fechou às {{caixa_fechamento|horabr}}</span>{% endif %}
+<span style="margin-left:auto;color:var(--txt2)">R${{total_hoje|brl}} · {{atend_hoje}} atend.</span></div>
+{% endif %}
+<!-- KPI CARDS -->
+{% set pct_receita = ((total_hoje - total_ontem) / total_ontem * 100) if total_ontem > 0 else 0 %}
+{% set pct_atend = ((atend_hoje - atend_ontem) / atend_ontem * 100) if atend_ontem > 0 else 0 %}
+{% set ticket_hoje = (total_hoje / atend_hoje) if atend_hoje > 0 else 0 %}
+{% set total_srv_mes = por_dia|sum(attribute='qtd') %}
+<div class="kpi-row" style="margin-bottom:16px">
+<div class="kpi-box">
+<div class="icon" style="background:rgba(196,30,42,.15)">💰</div>
+<b style="color:var(--vd)">R${{total_hoje|brl}}</b>
+<small>Receita hoje</small><br>
+<span class="var {% if pct_receita > 0 %}up{% elif pct_receita < 0 %}down{% else %}eq{% endif %}">{% if pct_receita > 0 %}+{% endif %}{{"{:.0f}".format(pct_receita)}}% vs ontem</span>
+</div>
+<div class="kpi-box">
+<div class="icon" style="background:rgba(139,64,152,.15)">👤</div>
+<b style="color:var(--rx)">{{atend_hoje}}</b>
+<small>Atendimentos</small><br>
+<span class="var {% if pct_atend > 0 %}up{% elif pct_atend < 0 %}down{% else %}eq{% endif %}">{% if pct_atend > 0 %}+{% endif %}{{"{:.0f}".format(pct_atend)}}% vs ontem</span>
+</div>
+<div class="kpi-box">
+<div class="icon" style="background:rgba(34,197,94,.12)">✂️</div>
+<b style="color:var(--txt)">{{total_srv_mes}}</b>
+<small>Serviços no mês</small><br>
+<span class="var eq">{{por_dia|length}} dia(s)</span>
+</div>
+<div class="kpi-box">
+<div class="icon" style="background:rgba(255,180,50,.12)">🎯</div>
+<b style="color:#FFB432">R${{ticket_hoje|brl}}</b>
+<small>Ticket médio</small><br>
+<span class="var eq">por atendimento</span>
+</div>
+</div>
+<!-- GRID: GRÁFICO + TOP SERVIÇOS -->
+<div class="dash-grid">
+<!-- GRÁFICO RECEITA -->
+<div class="dash-card">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+<div><h3 style="margin-bottom:0">Receita do Mês</h3><div class="sub">R${{total_mes|brl}} total · {{por_dia|length}} dia(s)</div></div>
+<div class="chart-filter">
+<button class="active" onclick="filtrarGrafico('ambos',this)">Ambos</button>
+<button onclick="filtrarGrafico('receita',this)">💰 Faturamento</button>
+<button onclick="filtrarGrafico('atend',this)">👤 Atendimentos</button>
+</div>
+</div>
+{% if por_dia %}<div style="position:relative;height:260px;margin-top:12px"><canvas id="chart"></canvas></div>
+{% else %}<div class="empty" style="margin-top:12px">Sem dados neste mês.</div>{% endif %}
+</div>
+<!-- TOP SERVIÇOS -->
+<div class="dash-card">
+<h3>Top Serviços</h3>
+<div class="sub">Mais vendidos do mês</div>
+<div style="margin-top:12px">
+{% if top_servicos %}
+{% set cores = ['#C41E2A','#FFB432','#22c55e','#3b82f6','#8B4098','#f472b6'] %}
+{% for s in top_servicos %}
+<div class="top-row">
+<span class="top-num">{{"%02d"|format(loop.index)}}</span>
+<span class="top-name">{{s.nome}}</span>
+<div class="pop-bar"><div class="pop-fill" style="width:{{s.pct}}%;background:{{cores[loop.index0 % 6]}}"></div></div>
+<span class="top-pct" style="color:{{cores[loop.index0 % 6]}};background:{{cores[loop.index0 % 6]}}15">{{s.pct}}%</span>
+</div>
+{% endfor %}
+{% else %}<div class="empty">Nenhum serviço vendido.</div>{% endif %}
+</div>
+</div>
+</div>
+<!-- GRID: MÉTODOS + RESUMO -->
+<div class="dash-grid" style="margin-top:16px">
+<!-- MÉTODOS DE PAGAMENTO -->
+<div class="dash-card">
+<h3>Métodos de Pagamento</h3>
+<div class="sub">Distribuição do mês</div>
+<div style="margin-top:12px">
+{% set met_icons = {'dinheiro':'💵','pix':'📱','debito':'💳','credito':'💎'} %}
+{% set met_cores = {'dinheiro':'#22c55e','pix':'#3b82f6','debito':'#FFB432','credito':'#8B4098'} %}
+{% set met_total = metodos|sum(attribute='total') if metodos else 1 %}
+{% if metodos %}
+{% for m in metodos %}
+{% set mpct = (m.total / met_total * 100) %}
+<div class="met-row">
+<span class="met-icon">{{met_icons.get(m.metodo,'💰')}}</span>
+<div style="flex:1">
+<div style="font-weight:600;text-transform:capitalize">{{m.metodo}}</div>
+<div style="font-size:10px;color:var(--txt3)">{{m.qtd}} pagamento(s)</div>
+</div>
+<div class="met-bar"><div class="met-fill" style="width:{{"{:.0f}".format(mpct)}}%;background:{{met_cores.get(m.metodo,'#8B4098')}}"></div></div>
+<span style="font-weight:700;color:{{met_cores.get(m.metodo,'#8B4098')}}">R${{m.total|brl}}</span>
+</div>
+{% endfor %}
+{% else %}<div class="empty">Nenhum pagamento.</div>{% endif %}
+</div>
+</div>
+<!-- RESUMO GERAL -->
+<div class="dash-card">
+<h3>Resumo Geral</h3>
+<div class="sub">Total acumulado</div>
+{% set n_meses = meses|length if meses|length > 0 else 1 %}
+{% set media_mensal = total_geral / n_meses %}
+<div style="text-align:center;padding:20px 0">
+<div style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1px">Média mensal</div>
+<div style="font-size:42px;font-weight:800;color:var(--vd);margin:6px 0">R${{media_mensal|brl}}</div>
+<div style="font-size:12px;color:var(--txt2)">baseado em {{n_meses}} mês(es)</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+<div style="text-align:center;padding:10px;background:var(--card2);border-radius:8px">
+<div style="font-size:18px;font-weight:800;color:var(--vd)">R${{total_geral|brl}}</div>
+<div style="font-size:9px;color:var(--txt3);text-transform:uppercase">receita total</div>
+</div>
+<div style="text-align:center;padding:10px;background:var(--card2);border-radius:8px">
+<div style="font-size:18px;font-weight:800;color:var(--rx)">R${{total_mes|brl}}</div>
+<div style="font-size:9px;color:var(--txt3);text-transform:uppercase">este mês</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+<div style="text-align:center;padding:10px;background:var(--card2);border-radius:8px">
+<div style="font-size:18px;font-weight:800;color:#FFB432">{{total_srv_mes}}</div>
+<div style="font-size:9px;color:var(--txt3);text-transform:uppercase">serviços mês</div>
+</div>
+<div style="text-align:center;padding:10px;background:var(--card2);border-radius:8px">
+<div style="font-size:18px;font-weight:800;color:#FFB432">R${% if total_srv_mes > 0 %}{{(total_mes/por_dia|sum(attribute='qtd'))|brl}}{% else %}0,00{% endif %}</div>
+<div style="font-size:9px;color:var(--txt3);text-transform:uppercase">ticket médio mês</div>
+</div>
+</div>
+</div>
+</div>
+<!-- HISTÓRICO -->
+<div class="dash-card" style="margin-top:16px">
+<h3>Histórico Diário <span style="font-size:10px;font-weight:400;margin-left:auto">{% if por_dia %}<button class="btn btn-vm btn-xs" style="font-size:10px;padding:4px 8px" onclick="excluirTudo()">🗑 Excluir tudo</button>{% endif %}</span></h3>
+{% if por_dia %}<table><thead><tr><th>Data</th><th>Atend.</th><th>Receita</th><th>Média</th><th></th></tr></thead><tbody>
+{% for r in por_dia|reverse %}<tr>
+<td><a href="/admin/fila?data={{r.dia}}" style="color:var(--rx);font-weight:600">{{r.dia|datebr}}</a></td>
+<td style="color:var(--txt2)">{{r.qtd}}</td><td style="color:var(--vd);font-weight:600">R${{r.total|brl}}</td>
+<td style="color:var(--txt2)">{% if r.qtd>0 %}R${{(r.total/r.qtd)|brl}}{% else %}—{% endif %}</td>
+<td><button class="btn btn-ghost btn-xs" style="font-size:10px;padding:3px 6px;color:var(--vm)" onclick="excluirDia('{{r.dia}}','{{r.dia|datebr}}')">✕</button></td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<div class="empty">Nenhum pagamento registrado.</div>{% endif %}
+</div>
+<!-- MODAIS -->
+<div class="modal-bg" id="modal-abrir"><div class="modal">
+<h3>💵 Abrir caixa? <span style="flex:1"></span><button class="btn btn-ghost btn-xs" onclick="fecharM('modal-abrir')">✕</button></h3>
+<p style="font-size:13px;color:var(--txt2);margin-bottom:16px">O sistema registra o horário de abertura.</p>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-xs" onclick="fecharM('modal-abrir')">Cancelar</button><button class="btn btn-vd btn-xs" onclick="toggleCaixa(true)">Confirmar e abrir</button></div>
+</div></div>
+<div class="modal-bg" id="modal-fechar"><div class="modal">
+<h3>💼 Fechar caixa? <span style="flex:1"></span><button class="btn btn-ghost btn-xs" onclick="fecharM('modal-fechar')">✕</button></h3>
+<div style="background:var(--card2);border:1px solid var(--borda);border-radius:8px;padding:14px;margin-bottom:14px;text-align:center">
+<div style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Resumo do dia</div>
+<div style="font-size:32px;font-weight:800;color:var(--vd)">R${{total_hoje|brl}}</div>
+<div style="font-size:12px;color:var(--txt2);margin-top:4px">{{atend_hoje}} atendimento(s){% if caixa_abertura %} · aberto às {{caixa_abertura|horabr}}{% endif %}</div></div>
+<p style="font-size:12px;color:var(--vm);margin-bottom:14px">⚠ Certifique-se de que todos os pagamentos foram registrados.</p>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-xs" onclick="fecharM('modal-fechar')">Cancelar</button><button class="btn btn-vm btn-xs" onclick="toggleCaixa(false)">Confirmar e fechar</button></div>
+</div></div>
+<!-- SCRIPTS -->
+{% if por_dia %}<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+var dados={{dias_grafico|tojson}},cxF={{(not caixa_aberto)|tojson}},hj="{{hoje}}";
+var lbl=dados.map(function(d){return d.dia.slice(8)+"/"+d.dia.slice(5,7)});
+function fmtBRL(v){return v.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}
+var dsReceita={label:'Faturamento (R$)',data:dados.map(function(d){return d.total}),backgroundColor:dados.map(function(d){return cxF&&d.dia===hj?'rgba(90,64,88,0.5)':'rgba(196,30,42,0.7)'}),borderColor:dados.map(function(d){return cxF&&d.dia===hj?'#5a4058':'#C41E2A'}),borderWidth:1,borderRadius:6,barPercentage:.4,categoryPercentage:.6,yAxisID:'y'};
+var dsAtend={label:'Atendimentos',data:dados.map(function(d){return d.qtd}),type:'line',borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.08)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#22c55e',tension:.4,yAxisID:'y1',fill:true};
+var chartCfg={type:'bar',data:{labels:lbl,datasets:[dsReceita,dsAtend]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+plugins:{legend:{labels:{color:'#a088a0',font:{size:10}}},tooltip:{backgroundColor:'#141414',titleColor:'#f0e0ee',bodyColor:'#a088a0',borderColor:'#3d2238',borderWidth:1,padding:10,
+callbacks:{label:function(c){if(c.dataset.yAxisID==='y')return' R$ '+fmtBRL(c.raw);return' '+c.raw+' atend.'},afterBody:function(c){return cxF&&dados[c[0].dataIndex].dia===hj?['📋 Caixa fechado']:[]}}}},
+scales:{x:{ticks:{color:'#5a4058',font:{size:10}},grid:{color:'rgba(42,21,37,0.3)'}},y:{display:true,position:'left',ticks:{color:'#C41E2A',font:{size:10},callback:function(v){return'R$'+fmtBRL(v)}},grid:{color:'rgba(42,21,37,0.2)'}},y1:{display:true,position:'right',ticks:{color:'#22c55e',font:{size:10},stepSize:1},grid:{display:false}}}}};
+var myChart=new Chart(document.getElementById('chart'),chartCfg);
+function filtrarGrafico(tipo,btn){
+document.querySelectorAll('.chart-filter button').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');
+if(tipo==='receita'){myChart.data.datasets=[dsReceita];myChart.options.scales.y.display=true;myChart.options.scales.y1.display=false}
+else if(tipo==='atend'){var dsA2=Object.assign({},dsAtend);dsA2.type='bar';dsA2.yAxisID='y';dsA2.backgroundColor='rgba(34,197,94,0.5)';dsA2.borderColor='#22c55e';dsA2.borderWidth=1;dsA2.borderRadius=6;dsA2.barPercentage=.4;dsA2.categoryPercentage=.6;delete dsA2.fill;delete dsA2.tension;delete dsA2.pointRadius;delete dsA2.pointBackgroundColor;myChart.data.datasets=[dsA2];myChart.options.scales.y.display=true;myChart.options.scales.y.ticks.color='#22c55e';myChart.options.scales.y.ticks.callback=function(v){return v};myChart.options.scales.y1.display=false}
+else{myChart.data.datasets=[dsReceita,dsAtend];myChart.options.scales.y.display=true;myChart.options.scales.y.ticks.color='#C41E2A';myChart.options.scales.y.ticks.callback=function(v){return'R$'+fmtBRL(v)};myChart.options.scales.y1.display=true}
+myChart.update()}
+</script>{% endif %}
+<script>
+var H={"Content-Type":"application/json"};
+function fecharM(id){document.getElementById(id).classList.remove("open")}
+document.querySelectorAll(".modal-bg").forEach(function(m){m.onclick=function(e){if(e.target===m)m.classList.remove("open")}});
+function toggleCaixa(a){fetch("/api/caixa/toggle",{method:"POST",headers:H,body:JSON.stringify({abrir:a})}).then(function(){location.reload()})}
+function excluirDia(dia,label){if(!confirm("Excluir todos os registros financeiros de "+label+"?\n\nIsso remove pagamentos e atendimentos concluídos deste dia.\n\nEssa ação NÃO pode ser desfeita!"))return;fetch("/api/financeiro/excluir-dia",{method:"POST",headers:H,body:JSON.stringify({dia:dia})}).then(function(){location.reload()})}
+function excluirTudo(){if(!confirm("⚠️ ATENÇÃO: Excluir TODOS os registros financeiros?\n\nIsso remove:\n- Todos os pagamentos\n- Todos os atendimentos concluídos\n- Todo o histórico de caixa\n\nEssa ação NÃO pode ser desfeita!"))return;if(!confirm("Tem certeza ABSOLUTA? Digite OK para confirmar."))return;fetch("/api/financeiro/excluir-tudo",{method:"POST",headers:H,body:JSON.stringify({})}).then(function(){location.reload()})}
+</script>
+{% endblock %}

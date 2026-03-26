@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Serviços — GusTico{% endblock %}
+{% block style %}
+<style>
+.card{background:rgba(15,15,15,.2) !important;backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important}
+.modal{background:rgba(15,15,15,.25) !important;backdrop-filter:blur(20px) !important;-webkit-backdrop-filter:blur(20px) !important}
+.modal-bg.open{background:rgba(0,0,0,.5)}
+.inp{background:rgba(20,20,20,.3) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+</style>
+{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+<div><h2 style="font-size:18px;font-weight:700">Serviços</h2><span style="font-size:11px;color:var(--txt3)">Tabela de preços</span></div>
+<button class="btn btn-vm btn-xs" onclick="document.getElementById('modal-novo').classList.add('open')">+ Novo</button></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+{% for s in servicos %}
+<div class="card" style="display:flex;justify-content:space-between;align-items:center;border-left:3px solid {% if s.ativo %}var(--rx){% else %}var(--borda){% endif %}">
+<div>
+<div style="font-weight:600;font-size:14px;{% if not s.ativo %}text-decoration:line-through;color:var(--txt3){% endif %}">{{s.nome}}</div>
+<div style="font-size:26px;font-weight:800;color:var(--rx);margin-top:2px">R${{"{:.0f}".format(s.preco)}}</div>
+<div style="font-size:10px;color:var(--txt3);margin-top:2px">{% if s.duracao>=60 %}{{s.duracao//60}}h{% if s.duracao%60 %} {{s.duracao%60}}min{% endif %}{% else %}{{s.duracao}}min{% endif %}{% if not s.ativo %} · INATIVO{% endif %}</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<button class="btn btn-ghost btn-xs btn-edit" data-id="{{s.id}}" data-nome="{{s.nome}}" data-preco="{{s.preco}}" data-dur="{{s.duracao}}" data-ativo="{{s.ativo}}">Editar</button>
+{% if s.ativo %}<button class="btn btn-vm btn-xs" onclick="toggle({{s.id}},0)">Excluir</button>
+{% else %}<button class="btn btn-vd btn-xs" onclick="toggle({{s.id}},1)">Ativar</button>{% endif %}
+</div></div>{% endfor %}</div>
+<div class="modal-bg" id="modal-novo"><div class="modal">
+<h3>Novo serviço <span style="flex:1"></span><button class="btn btn-ghost btn-xs" onclick="fechar('modal-novo')">✕</button></h3>
+<div class="form-group"><label>Nome</label><input type="text" id="n-nome" class="inp" placeholder="Ex: Corte + Barba"></div>
+<div class="form-group"><label>Preço (R$)</label><input type="number" id="n-preco" class="inp" step="0.01"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="form-group"><label>Horas</label><input type="number" id="n-h" class="inp" value="0" min="0"></div>
+<div class="form-group"><label>Minutos</label><input type="number" id="n-m" class="inp" value="30" min="0" max="59"></div></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn btn-ghost btn-xs" onclick="fechar('modal-novo')">Cancelar</button><button class="btn btn-vm btn-xs" onclick="criar()">Criar</button></div>
+</div></div>
+<div class="modal-bg" id="modal-editar"><div class="modal">
+<h3>Editar serviço <span style="flex:1"></span><button class="btn btn-ghost btn-xs" onclick="fechar('modal-editar')">✕</button></h3>
+<input type="hidden" id="e-id"><input type="hidden" id="e-ativo">
+<div class="form-group"><label>Nome</label><input type="text" id="e-nome" class="inp"></div>
+<div class="form-group"><label>Preço (R$)</label><input type="number" id="e-preco" class="inp" step="0.01"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="form-group"><label>Horas</label><input type="number" id="e-h" class="inp" min="0"></div>
+<div class="form-group"><label>Minutos</label><input type="number" id="e-m" class="inp" min="0" max="59"></div></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn btn-ghost btn-xs" onclick="fechar('modal-editar')">Cancelar</button><button class="btn btn-rx btn-xs" onclick="salvar()">Salvar</button></div>
+</div></div>
+<script>
+var J="application/json",H={"Content-Type":J};
+function fechar(id){document.getElementById(id).classList.remove("open")}
+document.querySelectorAll(".modal-bg").forEach(function(m){m.onclick=function(e){if(e.target===m)m.classList.remove("open")}});
+document.querySelectorAll(".btn-edit").forEach(function(b){b.onclick=function(){var d=b.dataset;document.getElementById("e-id").value=d.id;document.getElementById("e-nome").value=d.nome;document.getElementById("e-preco").value=d.preco;document.getElementById("e-h").value=Math.floor(d.dur/60);document.getElementById("e-m").value=d.dur%60;document.getElementById("e-ativo").value=d.ativo;document.getElementById("modal-editar").classList.add("open")}})
+async function criar(){var nome=document.getElementById("n-nome").value.trim(),preco=document.getElementById("n-preco").value;if(!nome||!preco)return alert("Preencha todos os campos.");var dur=parseInt(document.getElementById("n-h").value||0)*60+parseInt(document.getElementById("n-m").value||0);if(dur<1)return alert("Duração deve ser pelo menos 1 minuto.");await fetch("/api/servico",{method:"POST",headers:H,body:JSON.stringify({nome:nome,preco:preco,duracao:dur})});location.reload()}
+async function salvar(){var id=document.getElementById("e-id").value,nome=document.getElementById("e-nome").value.trim(),preco=document.getElementById("e-preco").value;if(!nome||!preco)return alert("Preencha todos os campos.");var dur=parseInt(document.getElementById("e-h").value||0)*60+parseInt(document.getElementById("e-m").value||0);if(dur<1)return alert("Duração deve ser pelo menos 1 minuto.");await fetch("/api/servico/"+id,{method:"PUT",headers:H,body:JSON.stringify({nome:nome,preco:preco,duracao:dur,ativo:document.getElementById("e-ativo").value})});location.reload()}
+async function toggle(id,a){await fetch("/api/servico/"+id+"/toggle",{method:"POST",headers:H,body:JSON.stringify({ativo:a})});location.reload()}
+</script>
+{% endblock %}

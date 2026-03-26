@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Caixas — GusTico{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+<div><h2 style="font-size:18px;font-weight:700">Histórico de caixas</h2><span style="font-size:11px;color:var(--txt3)">Registros de abertura e fechamento</span></div>
+<div style="display:flex;gap:8px"><a href="/admin/financeiro" class="btn btn-ghost btn-xs">← Voltar ao financeiro</a>
+{% if registros %}<button class="btn btn-vm btn-xs" onclick="limparTudo()">🗑 Limpar tudo</button>{% endif %}</div></div>
+<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<form method="GET" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%">
+<div class="form-group" style="margin:0"><label style="font-size:10px">De</label><input type="date" name="de" value="{{data_de}}" class="inp" style="width:160px;padding:6px 10px;font-size:12px"></div>
+<div class="form-group" style="margin:0"><label style="font-size:10px">Até</label><input type="date" name="ate" value="{{data_ate}}" class="inp" style="width:160px;padding:6px 10px;font-size:12px"></div>
+<button type="submit" class="btn btn-rx btn-xs" style="margin-top:14px">Filtrar</button>
+{% if data_de or data_ate %}<a href="/admin/caixa-historico" class="btn btn-ghost btn-xs" style="margin-top:14px">Limpar</a>{% endif %}
+</form></div>
+{% if registros %}
+<div class="card"><table><thead><tr><th>Abertura</th><th>Fechamento</th><th>Duração</th><th>Atend.</th><th>Total</th><th></th></tr></thead><tbody>
+{% for r in registros %}<tr>
+<td style="color:var(--vd)">{{r.abertura|datebr}} {{r.abertura|horabr}}</td>
+<td style="color:var(--vm)">{% if r.fechamento %}{{r.fechamento|datebr}} {{r.fechamento|horabr}}{% else %}—{% endif %}</td>
+<td style="color:var(--txt2)">{% if r.fechamento and r.abertura %}{{r.abertura|duracaobr(r.fechamento)}}{% else %}—{% endif %}</td>
+<td style="color:var(--txt2)">{{r.atendimentos}}</td>
+<td style="color:var(--vd);font-weight:600">R${{"{:.0f}".format(r.total)}}</td>
+<td><button class="btn btn-ghost btn-xs" style="font-size:10px;padding:3px 6px;color:var(--vm)" onclick="excluir({{r.id}})">✕</button></td>
+</tr>{% endfor %}</tbody></table></div>
+{% else %}<div class="empty" style="margin-top:16px">Nenhum registro de caixa{% if data_de or data_ate %} neste período{% endif %}.</div>{% endif %}
+<script>
+var H={"Content-Type":"application/json"};
+function excluir(id){if(!confirm("Excluir este registro de caixa?\n\nEssa ação NÃO pode ser desfeita!"))return;fetch("/api/caixa-historico/"+id+"/excluir",{method:"POST",headers:H}).then(function(){location.reload()})}
+function limparTudo(){if(!confirm("⚠️ Excluir TODO o histórico de caixas?\n\nEssa ação NÃO pode ser desfeita!"))return;fetch("/api/caixa-historico/excluir-tudo",{method:"POST",headers:H}).then(function(){location.reload()})}
+</script>
+{% endblock %}

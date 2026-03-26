@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}GusTico Barbearia{% endblock %}
+{% block style %}
+<style>
+.hero{text-align:center;padding:36px 0 28px}
+.hero-logo{width:52px;height:52px;background:var(--vm);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin-bottom:10px}
+.hero h1{font-size:38px;font-weight:800;text-transform:uppercase;letter-spacing:2px}
+.hero h1 em{color:var(--vm);font-style:normal}
+.hero p{color:var(--txt2);font-size:13px;margin-top:4px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.srv input{display:none}.srv .s-name{font-size:12px;font-weight:600}.srv .s-dur{font-size:10px;color:var(--txt3);margin-top:1px}.srv .s-price{font-size:12px;color:var(--rx);font-weight:700}
+.resumo{display:none;margin-top:8px;padding:8px 10px;background:var(--card2);border:1px solid var(--borda);border-radius:6px;font-size:11px;text-align:center}
+.fl{display:flex;align-items:center;gap:12px;padding:12px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--borda);border-radius:10px;margin-bottom:6px;border-left:3px solid var(--borda2);box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.fl.atendendo{border-left-color:var(--vd);background:var(--glass2)}.fl-n{font-size:20px;font-weight:700;color:var(--txt3);min-width:28px;text-align:center}.fl.atendendo .fl-n{color:var(--vd)}
+.fl-timer{font-size:10px;margin-top:2px}
+.live-bar{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:0 2px;font-size:10px;color:var(--txt3)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--vd);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+.status-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;font-size:10px;color:var(--txt3)}
+.st-dot{width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite}
+.st-dot.aberta{background:var(--vd);box-shadow:0 0 6px var(--vd)}.st-dot.fechada{background:var(--vm);box-shadow:0 0 6px var(--vm);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:700px){.cols{grid-template-columns:1fr}.hero h1{font-size:28px}}
+</style>
+{% endblock %}
+{% block content %}
+<div style="position:fixed;top:6px;right:6px;z-index:99"><a href="/admin/login" style="opacity:0;font-size:6px;display:block;width:14px;height:14px" onmouseenter="this.style.opacity='0.1'" onmouseleave="this.style.opacity='0'">.</a></div>
+<div class="hero">
+<div class="hero-logo">GT</div>
+<h1>GUS<em>TICO</em></h1>
+<p>Entre na fila, escolha o serviço e aguarde sua vez.</p>
+<div class="status-row"><div class="st-dot {% if fila_aberta %}aberta{% else %}fechada{% endif %}" id="st-dot"></div><span id="st-text">{% if fila_aberta %}Fila aberta{% else %}Fila fechada{% endif %}</span><span id="relogio"></span></div>
+<div style="font-size:10px;color:var(--txt2);margin-top:6px">🕐 Terça a Sábado · 08:00 às 19:00</div>
+<div class="social-links">
+<a href="https://instagram.com/_bgrafa_" target="_blank"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg> @_bgrafa_</a>
+<a href="https://wa.me/5562999493260" target="_blank"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214l-.294-.18-2.963.88.88-2.963-.18-.294A7.96 7.96 0 014 12a8 8 0 1116 0 8 8 0 01-8 8z"/></svg> (62) 99949-3260</a>
+</div></div>
+<div class="cols"><div>
+{% if not fila_aberta %}
+<div class="card" style="text-align:center;border-color:rgba(196,30,42,.3)">
+<div style="font-size:10px;color:var(--vm);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">Fila fechada</div>
+<p style="font-size:13px;color:var(--txt2)">Não estamos aceitando novos clientes agora.</p></div>
+{% else %}
+<div class="card"><h3>Entrar na fila</h3>
+<form method="POST" action="/entrar">
+<div class="form-group"><label>Seu nome</label><input type="text" name="nome" class="inp" placeholder="Ex: Rafael" required maxlength="60"></div>
+<div class="form-group"><label>Serviços (marque 1 ou mais)</label>
+<div class="srv-grid">{% for s in servicos %}
+<div class="srv" onclick="toggleSrv(this,{{s.preco}},{{s.duracao}})"><input type="checkbox" name="servico_ids" value="{{s.id}}"><div><div class="s-name">{{s.nome}}</div><div class="s-dur">{% if s.duracao >= 60 %}{{s.duracao//60}}h{% if s.duracao%60 %}{{s.duracao%60}}min{% endif %}{% else %}{{s.duracao}}min{% endif %}</div></div><span class="s-price">R${{"{:.0f}".format(s.preco)}}</span></div>
+{% endfor %}</div></div>
+<div class="resumo" id="resumo"><span style="color:var(--txt2)"><span id="r-qtd">0</span> serviço(s) · <span id="r-dur">0</span></span><span style="color:var(--rx);font-weight:700;margin-left:8px">R$<span id="r-preco">0</span></span></div>
+<button type="submit" class="btn btn-vm" id="btn-go" disabled style="width:100%;justify-content:center;margin-top:12px;padding:10px">Entrar na fila →</button>
+</form></div>
+{% endif %}
+</div><div><div class="card">
+<h3>Fila ao vivo <span style="font-size:10px;color:var(--txt3);font-weight:400" id="fila-count">{{fila|length}} pessoa(s)</span></h3>
+<div id="fila-container">
+{% if fila %}{% for f in fila %}
+<div class="fl {{f.status}}"><div class="fl-n">{{loop.index}}</div><div style="flex:1;min-width:0">
+<div style="font-weight:600;font-size:13px">{{f.nome}}</div><div style="font-size:11px;color:var(--txt2)">{{f.servicos or "—"}}</div>
+{% if f.status=="atendendo" and f.inicio %}<div class="fl-timer" style="color:var(--vd)" data-inicio="{{f.inicio}}" data-dur="{{f.duracao}}"></div>
+{% elif f.status=="aguardando" and espera_ate.get(f.id) %}<div class="fl-timer fl-espera" style="color:var(--rx)" data-ate="{{espera_ate[f.id]}}">~{{espera[f.id]}}min de espera</div>{% endif %}
+</div><span class="badge {% if f.status=='atendendo' %}b-at{% else %}b-ag{% endif %}">{{f.status}}</span></div>
+{% endfor %}{% else %}<div style="text-align:center;padding:24px;color:var(--txt3);font-size:13px">Fila vazia — seja o primeiro!</div>{% endif %}
+</div>
+<div class="live-bar"><div><span class="live-dot"></span><span id="live-text">ao vivo</span></div><span>atualiza a cada 5s</span></div>
+</div></div></div>
+<script>
+var tP=0,tD=0,tQ=0,serverOffset=new Date("{{agora_ts}}").getTime()-Date.now();
+function fmtDur(m){return m>=60?Math.floor(m/60)+"h"+(m%60?m%60+"min":""):m+"min"}
+function toggleSrv(el,p,d){var cb=el.querySelector("input");cb.checked=!cb.checked;el.classList.toggle("sel",cb.checked);tP+=cb.checked?p:-p;tD+=cb.checked?d:-d;tQ+=cb.checked?1:-1;document.getElementById("resumo").style.display=tQ>0?"block":"none";document.getElementById("r-preco").textContent=tP;document.getElementById("r-dur").textContent=fmtDur(tD);document.getElementById("r-qtd").textContent=tQ;document.getElementById("btn-go").disabled=tQ<1}
+function tickRelogio(){var n=new Date(),el=document.getElementById("relogio");if(el)el.textContent=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")+":"+String(n.getSeconds()).padStart(2,"0")}
+setInterval(tickRelogio,1000);tickRelogio();
+function fmtT(s){if(s<=0)return"agora";var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),r=s%60;if(h>0)return h+"h "+String(m).padStart(2,"0")+"min "+String(r).padStart(2,"0")+"s";return m>0?m+"min "+String(r).padStart(2,"0")+"s":r+"s"}
+function tickTimers(){
+document.querySelectorAll(".fl-timer[data-inicio]").forEach(function(el){var ini=new Date(el.dataset.inicio.replace(" ","T")).getTime(),dur=parseInt(el.dataset.dur||30)*60,rest=dur-Math.floor((Date.now()-ini)/1000);if(rest>0){el.textContent="⏳ restam "+fmtT(rest);el.style.color=rest<120?"var(--vm)":"var(--vd)"}else{el.textContent="⏰ tempo esgotado";el.style.color="var(--vm)"}});
+document.querySelectorAll(".fl-espera[data-ate]").forEach(function(el){var ate=new Date(el.dataset.ate.replace(" ","T")).getTime(),now=Date.now()+serverOffset,rest=Math.floor((ate-now)/1000);if(rest>0){el.textContent="⏳ ~"+fmtT(rest)+" de espera";el.style.color=rest<60?"var(--vd)":"var(--rx)"}else{el.textContent="🔔 sua vez está chegando!";el.style.color="var(--vd)"}})
+}
+setInterval(tickTimers,1000);tickTimers();
+var filaCache={};
+function renderFila(data){
+var c=document.getElementById("fila-container"),fc=document.getElementById("fila-count"),sd=document.getElementById("st-dot"),st=document.getElementById("st-text"),lt=document.getElementById("live-text");
+if(fc)fc.textContent=data.total+" pessoa(s)";if(sd)sd.className="st-dot "+(data.fila_aberta?"aberta":"fechada");if(st)st.textContent=data.fila_aberta?"Fila aberta":"Fila fechada";if(lt)lt.textContent="atualizado "+data.hora;
+if(!data.fila.length){c.innerHTML='<div style="text-align:center;padding:24px;color:var(--txt3);font-size:13px">Fila vazia — seja o primeiro!</div>';filaCache={};return}
+var newCache={};
+data.fila.forEach(function(f){
+var key=f.nome+"_"+f.pos;
+if(f.status==="aguardando"&&f.espera_ate){
+if(filaCache[key]){var oldAte=new Date(filaCache[key].replace(" ","T")).getTime(),newAte=new Date(f.espera_ate.replace(" ","T")).getTime();if(Math.abs(oldAte-newAte)<120000){newCache[key]=filaCache[key]}else{newCache[key]=f.espera_ate}}
+else{newCache[key]=f.espera_ate}}});
+var h="";
+data.fila.forEach(function(f){var timer="",key=f.nome+"_"+f.pos;
+if(f.status==="atendendo"&&f.inicio){timer='<div class="fl-timer" style="color:var(--vd)" data-inicio="'+f.inicio+'" data-dur="'+f.duracao+'"></div>'}
+else if(f.status==="aguardando"&&f.espera_ate){var ate=newCache[key]||f.espera_ate;timer='<div class="fl-timer fl-espera" style="color:var(--rx)" data-ate="'+ate+'"></div>'}
+h+='<div class="fl '+f.status+'"><div class="fl-n">'+f.pos+'</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+f.nome+'</div><div style="font-size:11px;color:var(--txt2)">'+f.servicos+'</div>'+timer+'</div><span class="badge '+(f.status==="atendendo"?"b-at":"b-ag")+'">'+f.status+'</span></div>'});
+c.innerHTML=h;filaCache=newCache;tickTimers()}
+function atualizarFila(){fetch("/api/fila-publica").then(function(r){return r.json()}).then(renderFila).catch(function(){})}
+setInterval(atualizarFila,5000);
+var frm=document.querySelector("form[action='/entrar']");if(frm)frm.addEventListener("submit",function(e){var h=new Date().getHours();if(h<8||h>=19){e.preventDefault();if(confirm("⚠️ Fora do horário de atendimento!\n\nNosso horário: 08:00 às 19:00.\n\nDeseja entrar na fila mesmo assim?")){frm.submit()}}});
+</script>
+{% endblock %}
